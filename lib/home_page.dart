@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'openai_servise.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -14,7 +15,13 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final speechToText = SpeechToText();
+  //final flutterTts = FlutterTts();
   String lastWords = '';
+  final OpenAIService openAIService = OpenAIService();
+  String? generatedContent;
+  String? generatedImageUrl;
+  int start = 200;
+  int delay = 200;
 
   @override
   void initState() {
@@ -158,8 +165,9 @@ class _HomePageState extends State<HomePage> {
         //backgroundColor: Pallete.firstSuggestionBoxColor,
         onPressed: () async {
           if (await speechToText.hasPermission && speechToText.isNotListening) {
-            startListening();
+            await startListening();
           } else if (speechToText.isListening) {
+            openAIService.isArtPromptAPI(lastWords);
             await stopListening();
           } else {
             initSpeechToText();
