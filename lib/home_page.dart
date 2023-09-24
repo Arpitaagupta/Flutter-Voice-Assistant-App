@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'openai_servise.dart';
+import 'openai_service.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -15,7 +16,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final speechToText = SpeechToText();
-  //final flutterTts = FlutterTts();
+  final flutterTts = FlutterTts();
   String lastWords = '';
   final OpenAIService openAIService = OpenAIService();
   String? generatedContent;
@@ -27,6 +28,12 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     initSpeechToText();
+    initTextToSpeech();
+  }
+
+  Future<void> initTextToSpeech() async {
+    await flutterTts.setSharedInstance(true);
+    setState(() {});
   }
 
   Future<void> initSpeechToText() async {
@@ -51,9 +58,14 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  Future<void> systemSpeak(String content) async {
+    await flutterTts.speak(content);
+  }
+
   void dispose() {
     super.dispose();
     speechToText.stop();
+    flutterTts.stop();
   }
 
   @override
@@ -110,14 +122,16 @@ class _HomePageState extends State<HomePage> {
                     topLeft: Radius.zero,
                   ),
                   color: Colors.amber),
-              child: const Padding(
-                padding: EdgeInsets.symmetric(vertical: 10.0),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 10.0),
                 child: Text(
-                  "Good Morning, what task can I do for you ?",
+                  generatedContent == null
+                      ? "Good Morning, what task can I do for you ?"
+                      : generatedContent!,
                   style: TextStyle(
                     color: Pallete.mainFontColor,
                     fontFamily: 'Cera Pro',
-                    fontSize: 25,
+                    fontSize: generatedContent == null ? 25 : 18,
                   ),
                 ),
               ),
@@ -167,7 +181,17 @@ class _HomePageState extends State<HomePage> {
           if (await speechToText.hasPermission && speechToText.isNotListening) {
             await startListening();
           } else if (speechToText.isListening) {
-            openAIService.isArtPromptAPI(lastWords);
+            final speech = await openAIService.isArtPromptAPI(lastWords);
+            if (speech.contains('https')) {
+              generatedImageUrl = speech;
+              generatedContent = null;
+              setState(() {});
+            } else {
+              generatedImageUrl = null;
+              generatedContent = speech;
+              setState(() {});
+              await systemSpeak(speech);
+            }
             await stopListening();
           } else {
             initSpeechToText();
